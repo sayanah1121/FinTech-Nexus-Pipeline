@@ -1,0 +1,47 @@
+{
+  "project_metadata": {
+    "version": "3.1.0",
+    "currency": "INR"
+  },
+  "reward_multipliers": {
+    "payment_modes": {
+      "Credit Card": {
+        "base_multiplier": 3.0,
+        "cibil_bonus": {
+          "excellent": {"min": 800, "extra": 2.0},
+          "good": {"min": 700, "extra": 1.0},
+          "average": {"min": 0, "extra": 0.0}
+        }
+      },
+      "Debit Card": {
+        "base_multiplier": 1.5,
+        "cibil_bonus": {
+          "excellent": {"min": 750, "extra": 0.5},
+          "average": {"min": 0, "extra": 0.0}
+        }
+      },
+      "UPI": {
+        "base_multiplier": 1.0,
+        "cibil_bonus": {
+          "excellent": {"min": 850, "extra": 1.0},
+          "average": {"min": 0, "extra": 0.0}
+        }
+      },
+      "NetBanking": {
+        "base_multiplier": 0.5,
+        "cibil_bonus": {"average": {"min": 0, "extra": 0.0}}
+      }
+    },
+    "merchant_category_boost": {
+      "Amazon": 1.5,
+      "Flipkart": 1.5,
+      "PayPal": 1.2,
+      "Blackhawk": 2.0,
+      "DEFAULT": 1.0
+    }
+  },
+  "fraud_rules": {
+    "high_value_threshold": 50000,
+    "restricted_modes": ["NetBanking"]
+  }
+}
