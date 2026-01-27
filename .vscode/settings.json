@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5435,
+            "driver": "PostgreSQL",
+            "name": "FinGuard Local",
+            "database": "finguard_analytics",
+            "username": "bank_admin",
+            "password": "secure_password"
+        }
+    ]
+}

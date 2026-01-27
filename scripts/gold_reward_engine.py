@@ -1,6 +1,6 @@
 import json
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, udf
+from pyspark.sql.functions import col, udf, current_timestamp, expr, when, lit
 from pyspark.sql.types import FloatType
 
 def run_reward_engine():
@@ -12,25 +12,21 @@ def run_reward_engine():
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .getOrCreate()
 
-    # Docker Paths
     config_path = "/opt/airflow/config/business_rules.json"
     input_path = "/opt/airflow/data/lake/silver/enriched"
     output_path = "/opt/airflow/data/lake/gold/banking_rewards"
 
     with open(config_path, "r") as f:
         rules = json.load(f)
-    
     rules_bc = spark.sparkContext.broadcast(rules)
 
     def calculate_points(amount, payment_mode, cibil_score, vendor):
         if not amount or not cibil_score: return 0.0
-        
         r = rules_bc.value["reward_multipliers"]
-        
         mode_rules = r["payment_modes"].get(payment_mode, r["payment_modes"]["NetBanking"])
         multiplier = mode_rules["base_multiplier"]
-        
         cibil = int(cibil_score)
+        
         if cibil >= 800: bonus = mode_rules["cibil_bonus"].get("excellent", {}).get("extra", 0)
         elif cibil >= 700: bonus = mode_rules["cibil_bonus"].get("good", {}).get("extra", 0)
         else: bonus = 0
@@ -42,13 +38,27 @@ def run_reward_engine():
 
     df = spark.read.format("delta").load(input_path)
     
-    # Cast types before UDF
     df_typed = df.withColumn("cibil_score", col("cibil_score").cast("integer")) \
                  .withColumn("amount", col("amount").cast("float"))
     
-    gold_df = df_typed.withColumn("earned_points", points_udf(col("amount"), col("payment_mode"), col("cibil_score"), col("vendor")))
+    # Calculate Points
+    df_scored = df_typed.withColumn("earned_points", points_udf(col("amount"), col("payment_mode"), col("cibil_score"), col("vendor")))
+    
+    # Add Professional Columns
+    final_df = df_scored.withColumn("reward_id", expr("uuid()")) \
+        .withColumnRenamed("txn_id", "transaction_id") \
+        .withColumnRenamed("user_id", "user_id_hash") \
+        .withColumn("reward_tier", 
+                    when(col("cibil_score") > 800, "Platinum")
+                    .when(col("cibil_score") > 700, "Gold")
+                    .otherwise("Standard")) \
+        .withColumn("processed_at", current_timestamp()) \
+        .select(
+            "reward_id", "user_id_hash", "transaction_id", "vendor", 
+            "payment_mode", "earned_points", "reward_tier", "processed_at"
+        )
 
-    gold_df.write.format("delta").mode("overwrite").save(output_path)
+    final_df.write.format("delta").mode("overwrite").option("mergeSchema", "true").save(output_path)
     print(f" Reward Calculation Complete.")
 
 if __name__ == "__main__":

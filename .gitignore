@@ -1,23 +1,17 @@
-# Ignore Data Lake & Database Storage
-data/raw/*
-data/lake/*
-data/settlements/*
-data/reference/*
+# Ignore Database Volume
 postgres_data/
-logs/
+
+# Ignore Generated Data
+data/raw/
+data/lake/
+data/settlements/
 
 # Ignore Python Cache
 __pycache__/
 *.pyc
 
-# Ignore Docker Metadata
-.docker/
-airflow-webserver.pid
-standalone_admin_password.txt
+# Ignore Logs
+logs/
 
-# Ignore IDE settings
-.vscode/
-.idea/
-
-# Security (Optional: You can keep config if passwords are dummy)
-# config/db_config.json
+# Ignore Airflow Configs that might have secrets
+airflow.cfg
