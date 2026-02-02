@@ -42,7 +42,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   airflow-webserver:
-    # ✅ FIX: Build from local Dockerfile instead of pulling image
     build: .
     depends_on: [ postgres_airflow ]
     environment:
@@ -54,11 +53,10 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./config:/opt/airflow/config
-      - ./data:/opt/airflow/data
+      - ./data:/opt/airflow/data  # <--- CRITICAL: Mounts your local data lake
     command: webserver
 
   airflow-scheduler:
-    # ✅ FIX: Build from local Dockerfile
     build: .
     depends_on: [ postgres_airflow ]
     environment:
@@ -68,7 +66,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./config:/opt/airflow/config
-      - ./data:/opt/airflow/data
+      - ./data:/opt/airflow/data  # <--- CRITICAL: Mounts your local data lake
     command: scheduler
 
 volumes:

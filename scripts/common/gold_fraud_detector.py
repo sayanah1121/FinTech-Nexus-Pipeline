@@ -3,7 +3,7 @@ from pyspark.sql.functions import col, lit, when, current_timestamp, expr
 import uuid
 
 def run_fraud_detector():
-    print(" Starting Gold Layer: Risk Scoring Engine (4 Levels)...")
+    print(" Starting Gold Layer: Risk Scoring Engine (Fan-In from 4 Microservices)...")
     
     spark = SparkSession.builder.appName("FinGuard_Gold_Risk_Scoring") \
         .config("spark.jars.packages", "io.delta:delta-spark_2.12:3.0.0") \
@@ -11,12 +11,32 @@ def run_fraud_detector():
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .getOrCreate()
 
-    input_path = "/opt/airflow/data/lake/silver/enriched"
-    # We continue to save to 'fraud_alerts' but now it contains ALL scored transactions
+    # --- FAN-IN ARCHITECTURE ---
+    # We read from independent microservice lanes
+    base_path = "/opt/airflow/data/lake/silver/enriched"
+    
+    try:
+        print("   -> Merging Streams from Amazon, Flipkart, PayPal, and Blackhawk...")
+        df_amz = spark.read.format("delta").load(f"{base_path}/amazon")
+        df_fk = spark.read.format("delta").load(f"{base_path}/flipkart")
+        df_pp = spark.read.format("delta").load(f"{base_path}/paypal")
+        df_bh = spark.read.format("delta").load(f"{base_path}/blackhawk")
+        
+        # Merge all 4 streams into one "Global Transaction Lake"
+        df = df_amz.unionByName(df_fk, allowMissingColumns=True) \
+                   .unionByName(df_pp, allowMissingColumns=True) \
+                   .unionByName(df_bh, allowMissingColumns=True)
+                   
+        print(f"   -> Successfully Merged Global Stream: {df.count()} active transactions.")
+        
+    except Exception as e:
+        print(f" Critical Error merging streams: {str(e)}")
+        print("   (Hint: Did you run the generation/cleaning scripts for all vendors first?)")
+        return
+
+    # Output to Unified Gold Table
     output_path = "/opt/airflow/data/lake/gold/fraud_alerts"
 
-    df = spark.read.format("delta").load(input_path)
-    
     # --- 4-TIER RISK LOGIC ---
     
     # 1. CRITICAL: High Value UPI (The "Red" Zone)
@@ -26,7 +46,6 @@ def run_fraud_detector():
     cond_high = (col("cibil_score").cast("int") < 600) & (col("amount").cast("float") > 15000) & (col("payment_mode") == "Credit Card")
     
     # 3. MODERATE: Just expensive transactions (The "Yellow" Zone)
-    # Any transaction over 10,000 that wasn't already caught above
     cond_moderate = (col("amount").cast("float") > 10000)
 
     # Apply Logic Chain
@@ -56,7 +75,7 @@ def run_fraud_detector():
         )
 
     final_df.write.format("delta").mode("overwrite").option("mergeSchema", "true").save(output_path)
-    print(f" Risk Scoring Complete. Total Transactions Processed: {final_df.count()}")
+    print(f" Risk Scoring Complete. Alerts saved to Gold Layer.")
 
 if __name__ == "__main__":
     run_fraud_detector()
