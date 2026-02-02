@@ -150,6 +150,8 @@ Fix: Check the logs of the previous task (e.g., if clean fails, check generate).
 Issue: "Blank Logs" / "Up for Retry"
 
 Fix: Your Docker is out of RAM. The DAG is configured with max_active_tasks=1 to prevent this, but you may need to increase Docker Desktop memory limit to 6GB.
+<img width="1226" height="373" alt="image" src="https://github.com/user-attachments/assets/3a7c8b21-fb18-4544-9f5f-fefe9e1d10af" />
+
 
 👨‍💻 Author
 Sayan Sarkar
