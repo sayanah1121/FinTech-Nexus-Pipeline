@@ -21,7 +21,7 @@ def ingest_to_bronze():
         raw_df = spark.read.option("header", "true").csv(raw_source)
         
         if raw_df.rdd.isEmpty():
-            print("⚠️  Warning: No CSV files found in Raw Zone. Skipping ingestion.")
+            print(" Warning: No CSV files found in Raw Zone. Skipping ingestion.")
             spark.stop()
             return
 
