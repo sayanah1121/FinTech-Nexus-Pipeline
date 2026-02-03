@@ -53,9 +53,10 @@ def create_dashboard_views():
         conn.commit()
         cur.close()
         conn.close()
-        print("✅ Success: Views updated.")
+        print(" Success: Views updated.")
     except Exception as e:
-        print(f"⚠️ Failed to create views (Check if DB is up): {str(e)}")
+        print(f"
+        Failed to create views (Check if DB is up): {str(e)}")
 
 def load_to_postgres():
     print(" Starting Postgres Load (Serving Layer)...")
